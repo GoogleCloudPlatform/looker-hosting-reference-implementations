@@ -72,7 +72,7 @@ spec:
             httpGet:
               port: 9999
               scheme: "HTTPS"
-              path: "/alive"
+              path: "/availability?mode=pod-liveness"
             initialDelaySeconds: 120
             periodSeconds: 30
           volumeMounts:
