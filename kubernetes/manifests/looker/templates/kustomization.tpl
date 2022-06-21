@@ -21,6 +21,9 @@ resources:
   - looker_namespace.yaml
   - looker_cloudsql_service_account.yaml
   - looker_secret_provider_class.yaml
+%{ if user_provisioning_secret_name != "" ~}
+  - looker_user_provisioner_secret_provider_class.yaml
+%{ endif ~}
   # - looker_pod_monitor.yaml
   - config
   - ../../base
@@ -44,6 +47,9 @@ patchesStrategicMerge:
   - patch_deployment_redis_env_variables.yaml
   - patch_deployment_monitoring_ports.yaml
   - patch_deployment_looker_resources.yaml
+%{ if user_provisioning_secret_name != "" ~}
+  - patch_deployment_user_provisioner_secret_store_csi.yaml
+%{ endif ~}
 
 patchesJson6902:
   - path: patch_hostname.yaml

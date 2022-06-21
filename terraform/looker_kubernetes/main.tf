@@ -401,13 +401,13 @@ module "workload_id_dns_service_account" {
   source  = "terraform-google-modules/service-accounts/google"
   version = "4.1.0"
 
-  project_id   = var.project_id
+  project_id   = var.dns_project_id
   prefix       = var.prefix
   display_name = "GKE Workload ID DNS"
   names        = ["looker-dns-workload-id"]
   description  = "Service account for GKE DNS workload identity"
   project_roles = [
-    "${var.project_id}=>roles/dns.admin",
+    "${var.dns_project_id}=>roles/dns.admin",
   ]
 }
 
@@ -417,7 +417,7 @@ module "workload_id_dns_member" {
   source  = "terraform-google-modules/iam/google//modules/service_accounts_iam"
   version = "7.4.0"
 
-  project          = var.project_id
+  project          = var.dns_project_id
   service_accounts = [module.workload_id_dns_service_account.email]
   mode             = "authoritative"
   bindings = {
@@ -437,6 +437,7 @@ module "workload_id_dns_member" {
 
 data "google_dns_managed_zone" "dns_zone" {
   name = var.dns_managed_zone_name
+  project = var.dns_project_id
 }
 
 module "looker_dns" {
@@ -452,7 +453,7 @@ module "looker_dns" {
 
   enable_cloud_dns = true
   dns_managed_zone = data.google_dns_managed_zone.dns_zone.name
-  dns_project      = var.project_id
+  dns_project      = var.dns_project_id
   dns_domain       = local.parsed_hosted_zone_domain
   dns_short_names  = [var.looker_subdomain == "" ? each.key : "${each.key}.${var.looker_subdomain}"]
 }

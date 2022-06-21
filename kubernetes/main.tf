@@ -117,7 +117,7 @@ resource "local_file" "looker_certmanager_clusterissuer" {
     {
       cert_admin_email = each.value.cert_admin_email,
       acme_server = each.value.acme_server,
-      dns_project = data.terraform_remote_state.looker.outputs.project
+      dns_project = data.terraform_remote_state.looker.outputs.dns_project
     }
   )
   filename = "${local.k8s_certmanager_path}/envs/${each.key}/cluster_issuer.yaml"
@@ -144,6 +144,7 @@ resource "local_file" "looker_kustomize" {
       namespace = each.value.looker_k8s_namespace,
       project_id = data.terraform_remote_state.looker.outputs.project
       env_label = each.key
+      user_provisioning_secret_name = each.value.user_provisioning_secret_name
     }
   )
   filename = "${local.k8s_looker_path}/envs/${each.key}/kustomization.yaml"
@@ -361,7 +362,6 @@ resource "local_file" "secret_provider_class" {
   file_permission = "0640"
 }
 
-
 # This creates the deployment patch that mounts the secret volume and creates the relevant env variables
 resource "local_file" "secret_store_csi" {
   for_each = data.terraform_remote_state.looker.outputs.env_data
@@ -369,6 +369,31 @@ resource "local_file" "secret_store_csi" {
   filename = "${local.k8s_looker_path}/envs/${each.key}/patch_deployment_secret_store_csi.yaml"
   file_permission = "0640"
 }
+
+# This creates the secret provider class for user provisioning, if enabled
+resource "local_file" "secret_provider_class_user_provisioner" {
+  for_each = data.terraform_remote_state.looker.outputs.env_data
+  content = templatefile(
+    "${local.k8s_looker_path}/templates/looker_user_provisioner_secret_provider_class.tpl",
+    {
+      project_id = data.terraform_remote_state.looker.outputs.project
+      user_provisioning_secret_name = each.value.user_provisioning_secret_name
+    }
+  )
+  filename = "${local.k8s_looker_path}/envs/${each.key}/looker_user_provisioner_secret_provider_class.yaml"
+  file_permission = "0640"
+}
+
+# This creates the deployment patch that mounts the secret volume and creates the relevant env variables
+# for user provisioning, if enabled
+resource "local_file" "secret_store_csi_user_provisioner" {
+  for_each = data.terraform_remote_state.looker.outputs.env_data
+  content = file("${local.k8s_looker_path}/templates/patch_deployment_user_provisioner_secret_store_csi.yaml")
+  filename = "${local.k8s_looker_path}/envs/${each.key}/patch_deployment_user_provisioner_secret_store_csi.yaml"
+  file_permission = "0640"
+}
+
+
 
 #################
 # Migration Job #

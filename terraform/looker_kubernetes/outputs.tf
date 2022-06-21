@@ -18,6 +18,10 @@ output "project" {
   value = var.project_id
 }
 
+output "dns_project" {
+  value = var.dns_project_id
+}
+
 output "region" {
   value = var.region
 }
@@ -41,6 +45,7 @@ output "env_data" {
       looker_k8s_service_account = "${var.looker_k8s_service_account}-${env}"
       cert_admin_email           = var.envs[env].cert_admin_email
       acme_server                = var.envs[env].acme_server
+      user_provisioning_secret_name = var.envs[env].user_provisioning_secret_name
     }
   }
 }

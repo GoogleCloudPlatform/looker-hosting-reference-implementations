@@ -24,6 +24,11 @@ variable "kms_project_id" {
   description = "The id of the KMS GCP Project to use. This can be the same as the project_id, but for production use cases it should be different."
 }
 
+variable "dns_project_id" {
+  type        = string
+  description = "the id of the GCP Project used for DNS. This can be the same as the project_id if your DNS zone is in the same project"
+}
+
 variable "region" {
   type        = string
   description = "The GCP region to use"
@@ -104,6 +109,7 @@ variable "envs" {
     gke_controller_range                 = string
     cert_admin_email                     = string
     acme_server                          = string
+    user_provisioning_secret_name        = string
   }))
   description = "A set of required options for each Looker environment"
   validation {
