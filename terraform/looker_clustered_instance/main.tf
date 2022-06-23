@@ -314,22 +314,16 @@ module "vm_instance_template" {
   startup_script = templatefile(
     "${path.module}/${var.startup_script}",
     {
-      db_server                      = module.looker_db.instance_connection_name,
-      db_user                        = module.looker_db.additional_users[0].name,
-      db_password_secret             = var.db_secret_name,
+      db_server                      = module.looker_db.instance_connection_name
+      db_user                        = module.looker_db.additional_users[0].name
+      db_password_secret             = var.db_secret_name
       gcm_key_secret_name            = var.gcm_key_secret_name
-      shared_storage_server          = google_filestore_instance.looker_filestore.networks.0.ip_addresses.0,
-      shared_storage_fs              = google_filestore_instance.looker_filestore.file_shares[0].name,
-      looker_license_key_secret      = var.looker_license_key_secret_name,
-      looker_password_secret         = var.looker_password_secret_name,
-      looker_firstname               = var.first_name,
-      looker_lastname                = var.last_name,
-      looker_technical_contact_email = var.technical_contact_email,
-      looker_client_id               = "",
-      looker_client_secret           = "",
-      env                            = var.env,
-      domain                         = local.hosted_zone_domain,
-      startup_flags                  = var.startup_flags,
+      shared_storage_server          = google_filestore_instance.looker_filestore.networks.0.ip_addresses.0
+      shared_storage_fs              = google_filestore_instance.looker_filestore.file_shares[0].name
+      user_provisioning_secret_name  = var.user_provisioning_secret_name
+      env                            = var.env
+      domain                         = local.hosted_zone_domain
+      startup_flags                  = var.startup_flags
       startup_params                 = var.startup_params
     }
   )
@@ -420,6 +414,8 @@ module "looker-lb-https" {
   create_url_map                  = false
   https_redirect                  = true
   managed_ssl_certificate_domains = ["${var.env}.looker.${local.hosted_zone_domain}"]
+  firewall_projects               = []
+  firewall_networks               = []
   backends = {
     web = {
       description                     = null

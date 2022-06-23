@@ -34,11 +34,6 @@ variable "zone" {
   description = "The GCP zone to use"
 }
 
-variable "technical_contact_email" {
-  type        = string
-  description = "Your Looker license key"
-}
-
 variable "image_family" {
   type        = string
   description = "The name of the image family for your VM image"
@@ -141,16 +136,6 @@ variable "env" {
   description = "A unique name for this Looker instance"
 }
 
-variable "first_name" {
-  type        = string
-  description = "Your first name. Used for user registration."
-}
-
-variable "last_name" {
-  type        = string
-  description = "Your last name. Used for user registration."
-}
-
 variable "subnet_ip_range" {
   type        = string
   description = "The IP range of the primary Looker subnet"
@@ -173,15 +158,9 @@ variable "private_ip_range" {
   default     = "192.168.0.0/16"
 }
 
-# These last two optional variables are only needed if you wish to trigger automatic user provisioning
-variable "looker_password_secret_name" {
+# This last optional variable is only needed if you wish to trigger automatic user provisioning
+variable "user_provisioning_secret_name" {
   type        = string
-  description = "The name of the looker password secret"
-  default     = ""
-}
-
-variable "looker_license_key_secret_name" {
-  type        = string
-  description = "Your looker license key secret name"
-  default     = ""
+  description = "The name of the user provisioner secret in secret manager"
+  default = ""
 }

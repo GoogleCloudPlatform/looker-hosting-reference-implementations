@@ -19,14 +19,12 @@ project = "your-gcp-project"
 region = "us-central1"
 zone = "us-central1-c"
 terraform_sa_email = "your_serviceaccount_email@gserviceaccount.com"
-technical_contact_email = "you@example.com"
 image_family = "looker"
 machine_type = "e2-standard-4"
 startup_script = "startup.sh"
 hosted_zone = "my-hosted-zone"
 env = "clustered"
-first_name = "Jane"
-last_name = "Doe"
+gcm_key_secret_name = "your_gcm_key_secret_name"
 node_count = 1
 db_type = "db-n1-standard-4"
 db_deletion_protection = "false"
@@ -51,6 +49,7 @@ Variable definitions are as follows:
 | startup_script         | Path to the startup script to use. Stick with the default provided in the module.                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | hosted_zone            | The name of your GCP Project’s Cloud DNS hosted zone                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | env                    | A unique name for this looker instance, e.g. “dev”, “sandbox”, “test”, "clustered", etc.                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| gcm_key_secret_name    | The GCP Secret containing your GCM encryption key |
 | first_name             | Your first name. Used for user registration.                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | last_name              | Your last name. Used for user registration.                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | node_count             | How many initial nodes to create. For the moment this should **always** be set to 1. (Looker doesn’t like when you boot up multiple nodes at once)                                                                                                                                                                                                                                                                                                                                                                        |

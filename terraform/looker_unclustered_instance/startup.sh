@@ -17,11 +17,6 @@
 # This makes use of terraform templating to inject relevant sections based on the variables provided in the .tfvars file
 
 # Define standard variables all variables should default to "" if not present in the tfvars file
-LOOKER_FIRSTNAME=${looker_firstname}
-LOOKER_LASTNAME=${looker_lastname}
-LOOKER_TECHNICAL_CONTACT_EMAIL=${looker_technical_contact_email}
-LOOKER_CLIENT_ID=${looker_client_id}
-LOOKER_CLIENT_SECRET=${looker_client_secret}
 DOMAIN=${domain}
 ENV=${env}
 
@@ -31,11 +26,6 @@ cd /home/looker/looker
 gcloud secrets versions access latest --secret ${gcm_key_secret_name} > /home/looker/looker/gcm_key
 sudo chown looker:looker gcm_key
 sudo chmod 400 gcm_key
-
-# set license key from secret
-%{ if looker_license_key_secret != "" }
-LOOKER_LICENSE_KEY=$(gcloud secrets versions access latest --secret ${looker_license_key_secret})
-%{ endif }
 
 # set database info including password from secret
 %{ if db_password_secret != "" }
@@ -71,40 +61,9 @@ sudo chown looker:looker looker-db.yml
 %{ endif }
 
 # Set up User-based Looker provisioner
-%{ if looker_password_secret != "" }
-LOOKER_PASSWORD=$(gcloud secrets versions access latest --secret ${looker_password_secret})
-
-cat <<EOT > /home/looker/looker/provision.yml
-license_key: "$LOOKER_LICENSE_KEY"
-host_url: "https://$ENV.looker.$DOMAIN"
-user:
-  first_name: "$LOOKER_FIRSTNAME"
-  last_name: "$LOOKER_LASTNAME"
-  email: "$LOOKER_TECHNICAL_CONTACT_EMAIL"
-  password: "$LOOKER_PASSWORD"
-EOT
-
+%{ if user_provisioning_secret_name != "" }
+gcloud secrets versions access latest --secret ${user_provisioning_secret_name} > /home/looker/looker/provision.yml
 sudo chown looker:looker provision.yml
-%{ endif }
-
-# Set up API-based Looker provisioner (if a password has been provided default to user-based above)"
-# API keys probably shouldn't be persistent secrets since they expire
-%{ if looker_client_secret != "" && looker_password_secret == ""}
-cat << EOT > /home/looker/looker/provision.yml
-license_key: "$LOOKER_LICENSE_KEY"
-host_url: "https://$ENV.looker.$DOMAIN"
-EOT
-
-cat << EOT > /home/looker/looker/api-provision.yml
-user:
-  first_name: "$LOOKER_FIRSTNAME"
-  last_name: "$LOOKER_LASTNAME"
-  client_id: "$LOOKER_CLIENT_ID"
-  client_secret: "$LOOKER_CLIENT_SECRET"
-EOT
-
-sudo chown looker:looker api-provision.yml provision.yml
-sudo chmod 600 api-provision.yml
 %{ endif }
 
 # Set up NFS system

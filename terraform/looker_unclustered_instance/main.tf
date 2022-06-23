@@ -1,5 +1,5 @@
 /**
- * Copyright 2021 Google LLC
+ * Copyright 2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -189,22 +189,16 @@ module "vm_instance_template" {
   startup_script = templatefile(
     "${path.module}/${var.startup_script}",
     {
-      db_server                      = "",
-      db_user                        = "",
-      db_password_secret             = "",
+      db_server                      = ""
+      db_user                        = ""
+      db_password_secret             = ""
       gcm_key_secret_name            = var.gcm_key_secret_name
       shared_storage_server          = ""
-      shared_storage_fs              = "",
-      looker_license_key_secret      = var.looker_license_key_secret
-      looker_password_secret         = var.looker_password_secret
-      looker_firstname               = var.first_name,
-      looker_lastname                = var.last_name,
-      looker_technical_contact_email = var.technical_contact_email,
-      looker_client_id               = "",
-      looker_client_secret           = "",
-      env                            = var.env,
-      domain                         = local.hosted_zone_domain,
-      startup_flags                  = [],
+      shared_storage_fs              = ""
+      user_provisioning_secret_name  = var.user_provisioning_secret_name
+      env                            = var.env
+      domain                         = local.hosted_zone_domain
+      startup_flags                  = []
       startup_params                 = {}
     }
   )
@@ -294,6 +288,8 @@ module "looker-lb-https" {
   create_url_map                  = false
   https_redirect                  = true
   managed_ssl_certificate_domains = ["${var.env}.looker.${local.hosted_zone_domain}"]
+  firewall_projects               = []
+  firewall_networks               = []
   backends = {
     web = {
       description                     = null
