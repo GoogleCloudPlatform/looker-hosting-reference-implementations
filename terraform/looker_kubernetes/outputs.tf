@@ -33,6 +33,7 @@ output "zone" {
 output "env_data" {
   value = {
     for env in keys(var.envs) : env => {
+      gke_cluster_name           = module.looker_gke[env].name
       db_name                    = module.looker_db[env].instance_name
       db_secret_name             = var.envs[env].db_secret_name
       gcm_key_secret_name        = var.envs[env].gcm_key_secret_name
