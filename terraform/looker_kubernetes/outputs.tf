@@ -19,7 +19,7 @@ output "project" {
 }
 
 output "dns_project" {
-  value = var.dns_project_id
+  value = local.parsed_dns_project_id
 }
 
 output "region" {

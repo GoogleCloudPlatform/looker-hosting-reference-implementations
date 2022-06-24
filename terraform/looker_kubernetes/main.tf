@@ -53,6 +53,10 @@ locals {
     k if v.gke_use_application_layer_encryption
   ])
 
+  # This parses the correct project ID if the user has specified separate projects for DNS and KMS
+  parsed_dns_project_id = coalesce(var.dns_project_id, var.project_id)
+  parsed_kms_project_id = coalesce(var.kms_project_id, var.project_id)
+
   # We set our default database flags here - these will be combined with the user defined flags from the variables
   default_db_flags = [
     {
@@ -291,7 +295,7 @@ module "looker_kms" {
 
   for_each = local.parsed_kms_envs
 
-  project_id      = var.kms_project_id
+  project_id      = local.parsed_kms_project_id
   location        = var.region
   keyring         = "looker-gke-secrets-${each.key}-${random_id.keyring_suffix[each.key].hex}"
   keys            = ["key-encryption-key"]
@@ -401,13 +405,13 @@ module "workload_id_dns_service_account" {
   source  = "terraform-google-modules/service-accounts/google"
   version = "4.1.0"
 
-  project_id   = var.dns_project_id
+  project_id   = local.parsed_dns_project_id
   prefix       = var.prefix
   display_name = "GKE Workload ID DNS"
   names        = ["looker-dns-workload-id"]
   description  = "Service account for GKE DNS workload identity"
   project_roles = [
-    "${var.dns_project_id}=>roles/dns.admin",
+    "${local.parsed_dns_project_id}=>roles/dns.admin",
   ]
 }
 
@@ -417,7 +421,7 @@ module "workload_id_dns_member" {
   source  = "terraform-google-modules/iam/google//modules/service_accounts_iam"
   version = "7.4.0"
 
-  project          = var.dns_project_id
+  project          = local.parsed_dns_project_id
   service_accounts = [module.workload_id_dns_service_account.email]
   mode             = "authoritative"
   bindings = {
@@ -437,7 +441,7 @@ module "workload_id_dns_member" {
 
 data "google_dns_managed_zone" "dns_zone" {
   name = var.dns_managed_zone_name
-  project = var.dns_project_id
+  project = local.parsed_dns_project_id
 }
 
 module "looker_dns" {
@@ -453,7 +457,7 @@ module "looker_dns" {
 
   enable_cloud_dns = true
   dns_managed_zone = data.google_dns_managed_zone.dns_zone.name
-  dns_project      = var.dns_project_id
+  dns_project      = local.parsed_dns_project_id
   dns_domain       = local.parsed_hosted_zone_domain
   dns_short_names  = [var.looker_subdomain == "" ? each.key : "${each.key}.${var.looker_subdomain}"]
 }

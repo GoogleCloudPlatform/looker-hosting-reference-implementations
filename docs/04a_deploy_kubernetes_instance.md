@@ -16,7 +16,6 @@ Deploying Looker in Kubernetes (K8s) is the recommended approach for production 
 
 ```
 project_id            = "your-gcp-project-id"
-kms_project_id        = "your-gcp-project-id"
 region                = "us-central1"
 zone                  = "us-central1-a"
 terraform_sa_email    = "your_serviceaccount_email@gserviceaccount"
@@ -60,25 +59,26 @@ envs = {
 
 Variable definitions are as follows:
 
-| Name                  | Description                                                                                                                                                                                                                                                                                                          |
-|-----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| project_id            | Your GCP Project ID                                                                                                                                                                                                                                                                                                  |
-| kms_project_id        | If you want to use [Application Layer Encryption](https://cloud.google.com/kubernetes-engine/docs/how-to/encrypting-secrets) the best practice is to set up Cloud KMS in a separate project. However, this can certainly be the same as your main project                                                            |
-| region                | The GCP region to use                                                                                                                                                                                                                                                                                                |
-| zone                  | The GCP zone to use                                                                                                                                                                                                                                                                                                  |
-| terraform_sa_email    | The email address of your deployment service account                                                                                                                                                                                                                                                                 |
-| prefix                | Since this module gives us the ability to deploy multiple "environments" in a single project we need a separate unique prefix to use for resource names.                                                                                                                                                              |
-| subnet_ip_range       | The IP range of the cluster's subnet in CIDR notation                                                                                                                                                                                                                                                                |
-| private_ip_range      | The IP range made available for Private Service Connections                                                                                                                                                                                                                                                          |
-| dns_managed_zone_name | The name of your GCP Cloud DNS managed zone                                                                                                                                                                                                                                                                          |
-| envs                  | New to this module is the ability to deploy multiple "environments" in a single project. In most circumstances different environments should be isolated in their own project, but in some cases it may be desirable to deploy multiple environments in a single project. The details of the map are explained below. |
+| Name | Description |
+|------|-------------|
+| project_id | Your GCP Project ID |
+| kms_project_id | (Optional) If you want to use [Application Layer Encryption](https://cloud.google.com/kubernetes-engine/docs/how-to/encrypting-secrets) the best practice is to set up Cloud KMS in a separate project. However, this can certainly be the same as your main project. Omit to use your main project for KMS as well. |
+| dns_project_id | (Optional) A separate project ID in case your DNS config lives in a different GCP project |
+| region | The GCP region to use |
+| zone | The GCP zone to use |
+| terraform_sa_email | The email address of your deployment service account |
+| prefix | Since this module gives us the ability to deploy multiple "environments" in a single project we need a separate unique prefix to use for resource names. |
+| subnet_ip_range | The IP range of the cluster's subnet in CIDR notation |
+| private_ip_range | The IP range made available for Private Service Connections |
+| dns_managed_zone_name | The name of your GCP Cloud DNS managed zone |
+| envs | New to this module is the ability to deploy multiple "environments" in a single project. In most circumstances different environments should be isolated in their own project, but in some cases it may be desirable to deploy multiple environments in a single project. The details of the map are explained below. |
 
 The envs variable is a map that contains environment-specific variables for your deployment. Each key of the map is the name of an environment and each value is an object that contains the required variables for the given environment name. The definitions are as follows:
 
 | Name                                 | Description                                                                                                                                                                                                                                  |
 |--------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| gcm_key_secret_name                  | The name of the GCM key secret you created in Secret Manager while setting up your GCP Project                                                                                                                                                                 |
-| db_secret_name                       | The name of your database password secret you created in Secret Manager while setting up your GCP Project                                                                                                                                                      |
+| gcm_key_secret_name                  | The name of the GCM key secret you created in Secret Manager while setting up your GCP Project |
+| db_secret_name                       | The name of your database password secret you created in Secret Manager while setting up your GCP Project |
 | db_tier                              | The machine type to use for the Cloud SQL database. Learn more [here](https://cloud.google.com/sql/docs/postgres/create-instance#machine-types)                                                                                              |
 | db_high_availability                 | Should the database be configured for high availablity? This adds significant cost.                                                                                                                                                            |
 | db_read_replicas                     | This creates one or more read replicas of the backend database. The underlying object is a bit complex so refer the variable definition and the [documentation]() for details.                                                               |

@@ -19,7 +19,7 @@ project = "your-gcp-project"
 region = "us-central1"
 zone = "us-central1-c"
 terraform_sa_email = "your_serviceaccount_email@gserviceaccount.com"
-image_family = "looker"
+image_family = "looker-ubuntu"
 machine_type = "e2-standard-4"
 startup_script = "startup.sh"
 hosted_zone = "my-hosted-zone"
@@ -31,16 +31,19 @@ Variable definitions are as follows:
 
 | Name                | Description                                                                                                                                                     |
 |---------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| project_id          | Your GCP Project ID                                                                                                                                             |
+| project             | Your GCP Project ID                                                                                                                                             |
+| dns_project         | (Optional) A separate Project ID in case your DNS config lives in a different GCP project                                                                       |
 | region              | The GCP region to use                                                                                                                                           |
 | zone                | The GCP zone to use                                                                                                                                             |
 | terraform_sa_email  | The email address of your service account                                                                                                                       |
-| image_family        | The name of the image family for your VM image. Unless you changed something this is going to be “looker”.                                                      |
+| image_family        | The name of the image family for your VM image. Unless you changed something this is going to be something like “looker-ubuntu".                                |
 | machine_type        | The Compute Engine [machine type](https://cloud.google.com/compute/docs/machine-types) to use for your Looker. To be safe use at least 4 cores and 16GB of RAM. |
 | startup_script      | Path to the startup script to use. Stick with the default provided in the module.                                                                               |
 | hosted_zone         | The name of your GCP Project’s Cloud DNS hosted zone                                                                                                            |
 | env                 | A unique name for this looker instance, e.g. “dev”, “sandbox”, “test”, etc.                                                                                     |
 | gcm_key_secret_name | The GCP Secret containing your GCM encryption key                                                                                                               |
+| subnet_ip_range     | (Optional) The IP range for the primary Looker subnet - the default value is 10.0.0.0/16 which is very generous (~65k IP addresses)                             |
+| user_provisioning_secret_name | (Optional) the name of a GCP secret that conforms to [Looker's user provisioning format](https://docs.looker.com/setup-and-management/on-prem-install/auto-provision-user). If present, this will auto-provision the user specified in the secret. |
 
 ## Step 2: Initialize the Looker Terraform Module
 

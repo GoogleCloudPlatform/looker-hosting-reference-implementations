@@ -21,12 +21,14 @@ variable "project_id" {
 
 variable "kms_project_id" {
   type        = string
-  description = "The id of the KMS GCP Project to use. This can be the same as the project_id, but for production use cases it should be different."
+  description = "The id of the KMS GCP Project to use. This can be the same as the project_id, but for production use cases it should be different. Omit to use project_id."
+  default     = ""
 }
 
 variable "dns_project_id" {
   type        = string
-  description = "the id of the GCP Project used for DNS. This can be the same as the project_id if your DNS zone is in the same project"
+  description = "the id of the GCP Project used for DNS. This can be the same as the project_id if your DNS zone is in the same project. Omit to use project_id"
+  default     = ""
 }
 
 variable "region" {

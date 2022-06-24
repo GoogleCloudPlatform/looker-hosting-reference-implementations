@@ -21,6 +21,7 @@
 locals {
   hosted_zone_domain   = trim(data.google_dns_managed_zone.looker_zone.dns_name, ".")
   hosted_zone_dns_name = data.google_dns_managed_zone.looker_zone.dns_name
+  parsed_dns_project   = coalesce(var.dns_project, var.project)
 }
 
 ##############
@@ -404,6 +405,7 @@ module "looker-lb-https" {
 # Pulling in the pre-defined hosted zone:
 data "google_dns_managed_zone" "looker_zone" {
   name = var.hosted_zone
+  project = local.parsed_dns_project
 }
 
 module "looker_dns" {
@@ -419,7 +421,7 @@ module "looker_dns" {
 
   enable_cloud_dns = true
   dns_managed_zone = data.google_dns_managed_zone.looker_zone.name
-  dns_project      = var.project
+  dns_project      = local.parsed_dns_project
   dns_domain       = local.hosted_zone_domain
   dns_short_names  = ["${var.env}.looker"]
 }

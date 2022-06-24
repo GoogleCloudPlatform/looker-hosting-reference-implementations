@@ -19,6 +19,12 @@ variable "project" {
   description = "The GCP Project to use"
 }
 
+variable "dns_project" {
+  type        = string
+  description = "The GCP Project to use for DNS if separate from the regular project. Omit to use project var instead."
+  default     = ""  
+}
+
 variable "terraform_sa_email" {
   type        = string
   description = "The Service Account to use for running Terraform"
