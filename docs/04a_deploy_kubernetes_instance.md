@@ -98,6 +98,7 @@ The envs variable is a map that contains environment-specific variables for your
 | gke_controller_range                 | For Private GKE clusteres you must specify a /28 CIDR block within your VPC's address space.                                                                                                                                                 |
 | cert_admin_email                     | By default we use cert-manager and LetsEncrypt to generate SSL certificates. This is the email address that will be used when registering an account to create certificates with LetsEncrypt.                                                |
 | acme_server                          | The ACME server to use with LetsEncrypt. For valid certificates this should always be `https://acme-v02.api.letsencrypt.org/directory`.                                                                                                      |
+| user_provisioning_secret_name | (Optional) the name of a GCP secret that conforms to [Looker's user provisioning format](https://docs.looker.com/setup-and-management/on-prem-install/auto-provision-user). If present, this will auto-provision the user specified in the secret. |
 
 The alias range maps have the following structure:
 
@@ -193,10 +194,9 @@ We use cert-manager to deploy free LetsEncrypt TLS/SSL certificates - cert-manag
 
 1. Navigate to the correct cert-manager environment directory (e.g. `/kubernetes/manifests/cert-manager/envs/dev`)
 2. Execute the following command: `kubectl apply -k .`
-3. We also need to deploy the cluster issuer, which is responsible for actually requesting and issuing the certificates. This must be deployed after the rest of the cert-manager bundle to allow time for the custom resource definitions to fully deploy. Execute the following command:
-```
-$ kubectl apply -k .
-```
+3. We also need to deploy the cluster issuer, which is responsible for actually requesting and issuing the certificates. This must be deployed after the rest of the cert-manager bundle to allow time for the custom resource definitions to fully deploy. Execute the following command: `kubectl apply -f cluster_issuer.yaml`.
+
+> Note: If you receive an X509 error try waiting another 30 seconds and redeploying.
 
 ### Step 8: Deploy Looker
 

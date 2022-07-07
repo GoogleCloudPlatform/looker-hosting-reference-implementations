@@ -297,7 +297,7 @@ module "looker-lb-https" {
       protocol                        = "HTTPS"
       port                            = null
       port_name                       = "https"
-      timeout_sec                     = 10
+      timeout_sec                     = 60
       enable_cdn                      = false
       custom_request_headers          = null
       custom_response_headers         = null
