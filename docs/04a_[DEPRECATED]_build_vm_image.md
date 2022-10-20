@@ -1,5 +1,7 @@
 # Build VM Images
 
+> **Warning: The clustered VM reference implementation is deprecated**. Running VM-based Looker instances is not advisable for production workloads. The use of Kubernetes is strongly recommended. For that reason we have deprecated support for the VM-based clustered instance and will be removing it from the repo in a future release. Please use the [kubernetes reference implementation](./03a_deploy_kubernetes_instance) instead.
+
 Next up we will create some Looker images that we can use in our deployments. In this section we will cover building VM images. VM images are required for VM-based deployments. We will utilize Packer and Ansible to create the image for us.
 
 ## Prerequisites

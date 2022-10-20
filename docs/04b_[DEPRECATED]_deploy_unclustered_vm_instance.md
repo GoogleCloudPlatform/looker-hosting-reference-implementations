@@ -1,5 +1,7 @@
 # Deploy an Unclustered Looker Instance
 
+> **Warning: The clustered VM reference implementation is deprecated**. Running VM-based Looker instances is not advisable for production workloads. The use of Kubernetes is strongly recommended. For that reason we have deprecated support for the VM-based clustered instance and will be removing it from the repo in a future release. Please use the [kubernetes reference implementation](./03a_deploy_kubernetes_instance) instead.
+
 For your first Looker deployment, you will deploy a simple single node instance with a HyperSQL backend. We’ll be leveraging the VM Image we created [with Packer](/builders/packer).
 
 > Warning: This deployment type is extremely bare-bones. This makes it simple and fast to spin up but it offers no automatic backups, no ability to scale out, and is difficult to maintain. It is therefore not suitable for serious development let alone production workloads. It is best used as a temporary sandbox and playground.

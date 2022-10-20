@@ -1,5 +1,7 @@
 # VM Operations Runbook
 
+> **Warning: The clustered VM reference implementation is deprecated**. Running VM-based Looker instances is not advisable for production workloads. The use of Kubernetes is strongly recommended. For that reason we have deprecated support for the VM-based clustered instance and will be removing it from the repo in a future release. Please use the [kubernetes reference implementation](./03a_deploy_kubernetes_instance) instead.
+
 While VM-based instances are not preferred for production workloads you may still need to perform some standard operational procedures on your Looker instance. Let's cover some of the most common activities, including restarting a node, scaling out a clustered instance, and upgrading Looker to a new version.
 
 ## Manually Check and Manage Nodes
