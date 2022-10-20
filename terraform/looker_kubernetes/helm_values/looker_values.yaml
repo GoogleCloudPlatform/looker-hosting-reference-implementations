@@ -1,0 +1,60 @@
+image:
+  repository: ${ looker_k8s_repository }
+  pullPolicy: ${ looker_k8s_image_pull_policy }
+  tag: "${ looker_version }"
+
+serviceAccount:
+  gcpServiceAccountEmail: ${ looker_gcp_service_account_email }
+
+nfs:
+  serverIp: ${ filestore_ip }
+
+database:
+  dbName: ${ looker_db_name }
+  dbUser: ${ looker_db_user }
+  dbConnectionName: ${ looker_db_connection_name }
+
+dns:
+  host: ${ looker_host_url }
+
+secrets:
+  project: ${ secrets_project }
+  dbPassSecretName: ${ db_pass_secret_name }
+  gcmKeySecretName: ${ gcm_key_secret_name }
+
+tls:
+  certAdminEmail: ${ cert_admin_email }
+  acmeServer: ${ cert_server }
+
+lookerStartupOptions:
+  flags: "${ looker_startup_flags }"
+
+updateConfig:
+  ${ looker_update_config }
+
+lookerNodes:
+  nodeCount: ${ looker_node_count }
+  version: "${ looker_version }"
+  resources:
+    ${ looker_node_resources }
+  dedicatedSchedulerNodes:
+    enabled: ${ looker_scheduler_node_enabled }
+    nodeCount: ${ looker_scheduler_node_count }
+    resources:
+      ${ looker_scheduler_node_resources }
+    schedulerThreads: ${ looker_scheduler_threads }
+    unlimitedSchedulerThreads: ${ looker_scheduler_unlimited_threads }
+    alertsSchedulerThreads: ${ looker_scheduler_alert_threads }
+    concurrentRenderCachingJobs: ${ looker_scheduler_render_caching }
+    concurrentRenderJobs: ${ looker_scheduler_render_jobs }
+
+options:
+  redis:
+    enabled: ${ looker_redis_enabled }
+    serverIp: ${ looker_redis_ip }
+    port: ${ looker_redis_port }
+  userProvisioning:
+    enabled: ${ looker_user_provisioning_enabled }
+    provisionerSecretName: ${ looker_user_provisioning_secret_name }
+  solr:
+    enabled: false

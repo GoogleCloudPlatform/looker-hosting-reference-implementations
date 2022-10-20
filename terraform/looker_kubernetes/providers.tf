@@ -22,6 +22,12 @@ terraform {
     google-beta = {
       source = "hashicorp/google-beta"
     }
+    helm = {
+      source = "hashicorp/helm"
+    }
+    kubernetes = {
+      source = "hashicorp/kubernetes"
+    }
   }
 }
 
@@ -39,6 +45,24 @@ provider "google-beta" {
   zone                        = var.zone
 }
 
+data "google_client_config" "default" {}
+
+provider "helm" {
+  kubernetes {
+    host                   = "https://${module.looker_gke.endpoint}"
+    token                  = data.google_client_config.default.access_token
+    cluster_ca_certificate = base64decode(module.looker_gke.ca_certificate)
+  }
+}
+
+provider "kubernetes" {
+  host                   = "https://${module.looker_gke.endpoint}"
+  token                  = data.google_client_config.default.access_token
+  cluster_ca_certificate = base64decode(module.looker_gke.ca_certificate)
+}
+
 provider "random" {}
 
 provider "local" {}
+
+provider "http" {}

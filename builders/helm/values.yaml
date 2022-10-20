@@ -1,0 +1,70 @@
+image:
+  repository: "gcr.io/project/looker"
+  pullPolicy: "Always"
+  tag: "latest"
+
+serviceAccount:
+  gcpServiceAccountEmail: "looker-workload-id@colinpistell-testspace.gserviceaccount.com"
+
+nfs:
+  serverIp: "192.168.0.1"
+
+database:
+  dbName: "looker"
+  dbUser: "looker"
+  dbConnectionName: "project:us-west1:looker-abc"
+
+dns:
+  host: "one.looker.example.com"
+
+secrets:
+  project: "project"
+  dbPassSecretName: "looker-db-pass"
+  gcmKeySecretName: "looker-gcm-key"
+
+tls:
+  certAdminEmail: "me@example.com"
+
+lookerStartupOptions:
+  flags: ""
+
+updateConfig:
+  maxSurge: 1
+  maxUnavailable: 0
+
+lookerNodes:
+  nodeCount: 2
+  version: "22.16"
+  resources:
+    requests:
+      cpu: 4000m
+      memory: 16Gi
+    limits:
+      cpu: 6000m
+      memory: 18Gi
+  dedicatedSchedulerNodes:
+    enabled: true
+    nodeCount: 2
+    resources:
+      requests:
+        cpu: 4000m
+        memory: 16Gi
+      limits:
+        cpu: 6000m
+        memory: 18Gi
+    schedulerThreads: 10
+    unlimitedSchedulerThreads: 3
+    alertsSchedulerThreads: 3
+    concurrentRenderCachingJobs: 3
+    concurrentRenderJobs: 2
+
+options:
+  redis:
+    enabled: true
+    serverIp: "192.168.0.11"
+    port: 6379
+  userProvisioning:
+    enabled: false
+    provisionerSecretName: "looker-user-provisioner"
+  solr:
+    enabled: false

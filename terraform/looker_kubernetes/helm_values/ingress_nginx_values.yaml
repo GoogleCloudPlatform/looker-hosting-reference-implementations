@@ -1,0 +1,4 @@
+controller:
+  service:
+    loadBalancerIP: ${ip_address}
+  kind: DaemonSet

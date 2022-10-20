@@ -14,47 +14,18 @@
  * limitations under the License.
  */
 
-output "project" {
-  value = var.project_id
+output "cert_manager_helm_status" {
+  value = helm_release.cert_manager.metadata
 }
 
-output "dns_project" {
-  value = local.parsed_dns_project_id
+output "ingress_nginx_helm_status" {
+  value = helm_release.ingress_nginx.metadata
 }
 
-output "region" {
-  value = var.region
+output "secrets_store_csi_driver_helm_status" {
+  value = helm_release.secrets_store_csi_driver.metadata
 }
 
-output "zone" {
-  value = var.zone
-}
-
-output "env_data" {
-  value = {
-    for env in keys(var.envs) : env => {
-      gke_cluster_name           = module.looker_gke[env].name
-      db_name                    = module.looker_db[env].instance_name
-      db_secret_name             = var.envs[env].db_secret_name
-      gcm_key_secret_name        = var.envs[env].gcm_key_secret_name
-      nfs_ip                     = google_filestore_instance.looker_filestore[env].networks.0.ip_addresses.0
-      redis_host                 = module.looker_cache[env].host
-      redis_port                 = module.looker_cache[env].port
-      looker_ip                  = module.looker_dns[env].addresses[0]
-      hostname                   = module.looker_dns[env].dns_fqdns[0]
-      looker_k8s_namespace       = "${var.looker_k8s_namespace}-${env}"
-      looker_k8s_service_account = "${var.looker_k8s_service_account}-${env}"
-      cert_admin_email           = var.envs[env].cert_admin_email
-      acme_server                = var.envs[env].acme_server
-      user_provisioning_secret_name = var.envs[env].user_provisioning_secret_name
-    }
-  }
-}
-
-output "cloud_sql_sa_email" {
-  value = module.workload_id_sql_service_account.email
-}
-
-output "dns_sa_email" {
-  value = module.workload_id_dns_service_account.email
+output "looker_helm_status" {
+  value = [for i in helm_release.looker : i.metadata]
 }

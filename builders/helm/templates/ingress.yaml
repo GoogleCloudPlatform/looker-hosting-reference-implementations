@@ -1,0 +1,61 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    cert-manager.io/issuer: letsencrypt-{{ .Release.Name }}
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/proxy-body-size: 100m
+    nginx.ingress.kubernetes.io/proxy-buffer-size: 512k
+    nginx.ingress.kubernetes.io/proxy-buffering: "on"
+    nginx.ingress.kubernetes.io/proxy-buffers-number: "4"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+  labels:
+    {{- include "looker.nodeLabels" . | nindent 4 }}
+  name: looker-ingress-{{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  rules:
+  - host: {{ .Values.dns.host }}
+    http:
+      paths:
+      - backend:
+          service:
+            name: looker-clustered-web-{{ .Release.Name }}
+            port:
+              name: looker-web
+        path: /
+        pathType: Prefix
+      - backend:
+          service:
+            name: looker-clustered-api-{{ .Release.Name }}
+            port:
+              name: looker-api
+        path: /api/
+        pathType: Prefix
+      - backend:
+          service:
+            name: looker-clustered-api-{{ .Release.Name }}
+            port:
+              name: looker-api
+        path: /api-docs/
+        pathType: Prefix
+      - backend:
+          service:
+            name: looker-clustered-api-{{ .Release.Name }}
+            port:
+              name: looker-api
+        path: /versions
+        pathType: Prefix
+      - backend:
+          service:
+            name: looker-clustered-web-{{ .Release.Name }}
+            port:
+              name: looker-web
+        path: /api/internal/
+        pathType: Prefix
+  tls:
+  - hosts:
+    - {{ .Values.dns.host }}
+    secretName: app-tls-{{ .Release.Name }}

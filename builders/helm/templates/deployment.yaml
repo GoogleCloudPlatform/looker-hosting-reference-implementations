@@ -1,0 +1,167 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    {{- include "looker.nodeLabels" . | nindent 4 }}
+  name: {{ include "looker.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.lookerNodes.nodeCount }}
+  selector:
+    matchLabels:
+      {{- include "looker.nodeSelectorLabels" . | nindent 6 }}
+  strategy:
+    rollingUpdate:
+      {{- toYaml .Values.updateConfig | nindent 6 }}
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        {{- include "looker.nodeLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/config_maps.yaml") . | sha256sum }}
+    spec:
+      containers:
+      - env:
+        {{- if .Values.options.redis.enabled }}
+        - name: LOOKER_REDIS_CACHE_DISCOVERY
+          value: redis://{{ .Values.options.redis.serverIp }}:{{ .Values.options.redis.port }}
+        - name: LOOKER_REDIS_OPERATIONAL_DISCOVERY
+          value: redis://{{ .Values.options.redis.serverIp }}:{{ .Values.options.redis.port }}
+        {{- end }}
+        - name: LKR_MASTER_KEY_ENV
+          valueFrom:
+            secretKeyRef:
+              key: gcm-key
+              name: looker-secrets-{{ .Release.Name }}
+        - name: LOOKER_DB_PASS
+          valueFrom:
+            secretKeyRef:
+              key: db-pass
+              name: looker-secrets-{{ .Release.Name }}
+        - name: LOOKER_DB
+          value: dialect=mysql&host=127.0.0.1&username={{ .Values.database.dbUser }}&database={{ .Values.database.dbName }}&port=3306&password=$(LOOKER_DB_PASS)
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        imagePullPolicy: {{.Values.image.pullPolicy }}
+        livenessProbe:
+          httpGet:
+            path: /availability?mode=pod-liveness
+            port: 9999
+            scheme: HTTPS
+          initialDelaySeconds: 120
+          periodSeconds: 30
+        name: looker-clustered-instance
+        ports:
+        - containerPort: 9920
+          name: jmx-metrics
+          protocol: TCP
+        - containerPort: 9999
+          name: looker-web
+          protocol: TCP
+        - containerPort: 19999
+          name: looker-api
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /alive
+            port: 9999
+            scheme: HTTPS
+          initialDelaySeconds: 90
+          periodSeconds: 5
+          successThreshold: 2
+        resources:
+          {{- toYaml .Values.lookerNodes.resources | nindent 10 }}
+        securityContext:
+          runAsGroup: 9999
+          runAsUser: 9999
+        volumeMounts:
+        {{- if .Values.options.userProvisioning.enabled }}
+        - mountPath: /app/provision.yml
+          name: user-provisioner
+          readOnly: true
+          subPath: provision.yml
+        - mountPath: /var/user-secrets
+          name: secret-store-user-provision
+          readOnly: true
+        {{- end }}
+        - mountPath: /var/secrets
+          name: secret-store
+          readOnly: true
+        - mountPath: /app/lookerstart.cfg
+          name: looker-startup
+          subPath: lookerstart.cfg
+        - mountPath: /app/jmx-prom-config.yaml
+          name: jmx-prom-config
+          subPath: jmx-prom-config.yaml
+        - mountPath: /mnt/lookerfiles
+          name: lookerfiles
+      - command:
+        - /cloud_sql_proxy
+        - -instances={{ .Values.database.dbConnectionName }}=tcp:3306
+        image: gcr.io/cloudsql-docker/gce-proxy:1.17
+        name: cloud-sql-proxy
+        resources:
+          limits:
+            cpu: 2000m
+            memory: 2Gi
+          requests:
+            cpu: 500m
+            memory: 1Gi
+        securityContext:
+          runAsNonRoot: true
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - chown -R 9999:9999 /mnt/lookerfiles
+        image: gcr.io/google-containers/busybox:latest
+        name: looker-data-ownership-grant
+        volumeMounts:
+        - mountPath: /mnt/lookerfiles
+          name: lookerfiles
+      securityContext:
+        fsGroup: 9999
+      serviceAccountName: {{ include "looker.serviceAccount" . }}-{{ .Release.Name }}
+      volumes:
+      {{- if .Values.options.userProvisioning.enabled }}
+      - name: user-provisioner
+        secret:
+          items:
+          - key: provisioner
+            path: provision.yml
+          secretName: looker-user-provision-{{ .Release.Name }}
+      - csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: looker-user-provisioning-secrets-{{ .Release.Name }}
+        name: secret-store-user-provision
+      {{- end }}
+      - csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: looker-secrets-{{ .Release.Name }}
+        name: secret-store
+      - name: lookerfiles
+        persistentVolumeClaim:
+          claimName: fileserver-claim-{{ .Release.Name }}
+          readOnly: false
+      - configMap:
+          defaultMode: 420
+          items:
+          - key: lookerstart.cfg
+            path: lookerstart.cfg
+          name: looker-startup-options-{{ .Release.Name }}
+        name: looker-startup
+      - configMap:
+          defaultMode: 420
+          items:
+          - key: jmx-prom-config.yaml
+            path: jmx-prom-config.yaml
+          name: jmx-prom-config-{{ .Release.Name }}
+        name: jmx-prom-config

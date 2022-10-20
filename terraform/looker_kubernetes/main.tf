@@ -24,14 +24,10 @@
 locals {
 
   # This finds all secondary ranges among all envs and flattens them into a single list
-  parsed_secondary_ranges = flatten(
-    [
-      for i in values(var.envs) : [
-        i.gke_subnet_pod_range,
-        i.gke_subnet_service_range
-      ]
-    ]
-  )
+  parsed_secondary_ranges = [
+    var.gke_subnet_pod_range,
+    var.gke_subnet_service_range
+  ]
 
   # This allows us to pass in the Private IP range as a cidr block, like every other
   # ip range variable.
@@ -47,12 +43,6 @@ locals {
   # This pre-parses the main GKE servcie account
   parsed_main_gke_service_account = "serviceAccount:service-${data.google_project.gke_project.number}@container-engine-robot.iam.gserviceaccount.com"
 
-  # We need to figure out which environments require gke application-layer kms encryption. This is to avoid unnecessary kms keyring creation
-  parsed_kms_envs = toset([
-    for k, v in var.envs :
-    k if v.gke_use_application_layer_encryption
-  ])
-
   # This parses the correct project ID if the user has specified separate projects for DNS and KMS
   parsed_dns_project_id = coalesce(var.dns_project_id, var.project_id)
   parsed_kms_project_id = coalesce(var.kms_project_id, var.project_id)
@@ -60,8 +50,25 @@ locals {
   # We set our default database flags here - these will be combined with the user defined flags from the variables
   default_db_flags = [
     {
-      name = "local_infile"
+      name  = "local_infile"
       value = "off"
+    }
+  ]
+
+  # We need to create entries for the databases and database users for each instance being deployed in this environment
+  parsed_db_databases = [
+    for k in keys(var.envs) : {
+      name      = "looker-${k}"
+      charset   = "utf8mb4"
+      collation = "utf8mb4_general_ci"
+    }
+  ]
+
+  parsed_db_users = [
+    for k in keys(var.envs) : {
+      name     = "looker-${k}"
+      host     = "cloudsqlproxy~%"
+      password = data.google_secret_manager_secret_version.db_pass[k].secret_data
     }
   ]
 }
@@ -79,7 +86,7 @@ data "google_project" "gke_project" {
 # are needed because our GKE cluster will be VPC-native
 module "looker_vpc" {
   source  = "terraform-google-modules/network/google"
-  version = "4.1.0"
+  version = "5.2.0"
 
   project_id   = var.project_id
   network_name = "${var.prefix}-network"
@@ -99,7 +106,7 @@ module "looker_vpc" {
 # to Cloud SQL, Filestore, and Memorystore
 module "private_service_access" {
   source  = "GoogleCloudPlatform/sql-db/google//modules/private_service_access"
-  version = "9.0.0"
+  version = "12.0.0"
 
   project_id    = var.project_id
   vpc_network   = element(split("/", module.looker_vpc.network_self_link), length(split("/", module.looker_vpc.network_self_link)) - 1) # https://github.com/terraform-google-modules/terraform-google-sql-db/issues/176
@@ -111,7 +118,7 @@ module "private_service_access" {
 # Create a router and NAT to allow egress traffic to reach the internet
 module "cloud_router" {
   source  = "terraform-google-modules/cloud-router/google"
-  version = "1.3.0"
+  version = "3.0.0"
 
   project = var.project_id
   name    = "${var.prefix}-looker-router"
@@ -127,7 +134,6 @@ module "cloud_router" {
 # Database #
 ############
 
-
 # We need to pull in the secret that has been previously created
 data "google_secret_manager_secret_version" "db_pass" {
   for_each = var.envs
@@ -138,49 +144,36 @@ module "looker_db" {
   depends_on = [module.private_service_access] # We need to make sure private services is ready first
 
   source  = "GoogleCloudPlatform/sql-db/google//modules/mysql"
-  version = "9.0.0"
-
-  for_each = var.envs
+  version = "12.0.0"
 
   project_id                      = var.project_id
-  name                            = "${var.prefix}-looker-${each.key}"
+  name                            = "${var.prefix}-looker-db-instance"
   random_instance_name            = true
-  database_version                = each.value.db_version
+  database_version                = var.db_version
   region                          = var.region
   zone                            = var.zone
-  deletion_protection             = each.value.db_deletion_protection
-  tier                            = each.value.db_tier
+  deletion_protection             = var.db_deletion_protection
+  tier                            = var.db_tier
   enable_default_db               = false
   enable_default_user             = false
   maintenance_window_day          = 6
   maintenance_window_hour         = 20
   maintenance_window_update_track = "stable"
-  availability_type               = each.value.db_high_availability ? "REGIONAL" : "ZONAL"
+  availability_type               = var.db_high_availability ? "REGIONAL" : "ZONAL"
 
-  database_flags = distinct(concat(local.default_db_flags, each.value.db_flags))
+  database_flags = distinct(concat(local.default_db_flags, var.db_flags))
 
   ip_configuration = {
     authorized_networks = []
     ipv4_enabled        = false
     private_network     = module.looker_vpc.network_self_link
     require_ssl         = true
+    allocated_ip_range  = module.private_service_access.google_compute_global_address_name
   }
 
-  additional_databases = [
-    {
-      name      = "looker"
-      charset   = "utf8mb4"
-      collation = "utf8mb4_general_ci"
-    }
-  ]
+  additional_databases = local.parsed_db_databases
 
-  additional_users = [
-    {
-      name     = "looker"
-      password = data.google_secret_manager_secret_version.db_pass[each.key].secret_data
-      host     = "cloudsqlproxy~%"
-    }
-  ]
+  additional_users = local.parsed_db_users
 
   backup_configuration = {
     enabled                        = true
@@ -192,7 +185,7 @@ module "looker_db" {
     retention_unit                 = "COUNT"
   }
 
-  read_replicas = each.value.db_read_replicas
+  read_replicas = var.db_read_replicas
 
 }
 
@@ -238,7 +231,7 @@ module "looker_cache" {
   depends_on = [module.private_service_access]
 
   source  = "terraform-google-modules/memorystore/google"
-  version = "4.2.0"
+  version = "5.1.0"
 
   for_each = var.envs
 
@@ -265,7 +258,7 @@ module "looker_cache" {
 # We need to create a custom service account for the GKE nodes
 module "gke_service_account" {
   source  = "terraform-google-modules/service-accounts/google"
-  version = "4.1.0"
+  version = "4.1.1"
 
   project_id   = var.project_id
   prefix       = var.prefix
@@ -285,19 +278,17 @@ module "gke_service_account" {
 # If enabled, we need a KMS key to set up application-layer secret encryption
 
 resource "random_id" "keyring_suffix" {
-  for_each    = local.parsed_kms_envs
   byte_length = 4
 }
 
 module "looker_kms" {
   source  = "terraform-google-modules/kms/google"
-  version = "2.1.0"
-
-  for_each = local.parsed_kms_envs
+  version = "2.2.1"
+  count   = var.gke_use_application_layer_encryption ? 1 : 0
 
   project_id      = local.parsed_kms_project_id
   location        = var.region
-  keyring         = "looker-gke-secrets-${each.key}-${random_id.keyring_suffix[each.key].hex}"
+  keyring         = "${var.prefix}-looker-gke-secrets-${random_id.keyring_suffix.hex}"
   keys            = ["key-encryption-key"]
   prevent_destroy = false
 
@@ -312,45 +303,38 @@ module "looker_kms" {
 # since it allows you to modify the node pool without rebuilding the entire cluster)
 module "looker_gke" {
   source  = "terraform-google-modules/kubernetes-engine/google//modules/beta-private-cluster"
-  version = "19.0.0"
+  version = "23.1.0"
 
-  for_each = var.envs
-
-  project_id                        = var.project_id
-  name                              = "${var.prefix}-looker-gke-${each.key}"
-  region                            = var.region
-  zones                             = each.value.gke_node_zones
-  regional                          = each.value.gke_regional_cluster
-  network                           = module.looker_vpc.network_name
-  subnetwork                        = module.looker_vpc.subnets_names[0]
-  ip_range_pods                     = each.value.gke_subnet_pod_range.range_name
-  ip_range_services                 = each.value.gke_subnet_service_range.range_name
-  create_service_account            = false
-  service_account                   = module.gke_service_account.email
-  enable_private_endpoint           = each.value.gke_private_endpoint
-  enable_private_nodes              = true
-  remove_default_node_pool          = true
-  initial_node_count                = 1
-  master_ipv4_cidr_block            = each.value.gke_controller_range
-  add_master_webhook_firewall_rules = true
-  firewall_inbound_ports            = ["8443"]
-  release_channel                   = each.value.gke_release_channel
-  database_encryption               = each.value.gke_use_application_layer_encryption ? [{ state = "ENCRYPTED", key_name = module.looker_kms[each.key].keys["key-encryption-key"] }] : [{ state = "DECRYPTED", key_name = "" }]
-
-  # This is an optional component to enable workload monitoring, which can be used to export Looker
-  # metrics to Cloud Monitoring. If you do not care for Cloud Monitoring support you can leave this
-  # disabled.
-  # Temporarily commenting this out to avoid https://github.com/hashicorp/terraform-provider-google/issues/10361.
-  # After the initial run the below line can be commented back in and then the Terraform can be re-applied (i.e. `terraform apply`)
-  # to safely enable workload monitoring.
-  # monitoring_enabled_components     = ["SYSTEM_COMPONENTS", "WORKLOADS"]
+  project_id                           = var.project_id
+  name                                 = "${var.prefix}-looker-cluster"
+  region                               = var.region
+  zones                                = var.gke_node_zones
+  regional                             = var.gke_regional_cluster
+  network                              = module.looker_vpc.network_name
+  subnetwork                           = module.looker_vpc.subnets_names[0]
+  ip_range_pods                        = var.gke_subnet_pod_range.range_name
+  ip_range_services                    = var.gke_subnet_service_range.range_name
+  create_service_account               = false
+  service_account                      = module.gke_service_account.email
+  enable_private_endpoint              = var.gke_private_endpoint
+  master_global_access_enabled         = var.gke_master_global_access_enabled
+  enable_private_nodes                 = true
+  master_authorized_networks           = var.gke_master_authorized_networks
+  remove_default_node_pool             = true
+  initial_node_count                   = 1
+  master_ipv4_cidr_block               = var.gke_controller_range
+  add_master_webhook_firewall_rules    = true
+  firewall_inbound_ports               = ["8443"]
+  release_channel                      = var.gke_release_channel
+  database_encryption                  = var.gke_use_application_layer_encryption ? [{ state = "ENCRYPTED", key_name = module.looker_kms.keys["key-encryption-key"] }] : [{ state = "DECRYPTED", key_name = "" }]
+  monitoring_enable_managed_prometheus = var.gke_use_managed_prometheus
 
   node_pools = [
     {
-      name         = "${var.prefix}-looker-node-${each.key}"
-      machine_type = each.value.gke_node_tier
-      min_count    = each.value.gke_node_count_min
-      max_count    = each.value.gke_node_count_max
+      name         = "${var.prefix}-looker-nodepool"
+      machine_type = var.gke_node_tier
+      min_count    = var.gke_node_count_min
+      max_count    = var.gke_node_count_max
       image_type   = "COS_CONTAINERD"
     }
   ]
@@ -364,18 +348,16 @@ module "looker_gke" {
 # Workload ID #
 ###############
 
-# Finally we need two more service accounts for workload identity
-
-# This first set takes care of Cloud SQL connectivity from inside the GKE cluster
-module "workload_id_sql_service_account" {
+# This takes care of GCP connectivity from inside the GKE cluster
+module "workload_id_looker_k8s_service_account" {
   source  = "terraform-google-modules/service-accounts/google"
-  version = "4.1.0"
+  version = "4.1.1"
 
   project_id   = var.project_id
   prefix       = var.prefix
-  display_name = "GKE Workload ID BQ and Cloud SQL"
-  names        = ["looker-sql-workload-id"]
-  description  = "Service account for GKE BigQuery and CloudSQL workload identity"
+  display_name = "Looker GKE Workload ID"
+  names        = ["looker-k8s-workload-id"]
+  description  = "Service account for Looker GKE workload identity"
   project_roles = [
     "${var.project_id}=>roles/cloudsql.client",
     "${var.project_id}=>roles/bigquery.dataEditor",
@@ -384,53 +366,21 @@ module "workload_id_sql_service_account" {
   ]
 }
 
-module "workload_id_sql_member" {
+module "workload_id_looker_k8s_member" {
   depends_on = [module.looker_gke]
 
   source  = "terraform-google-modules/iam/google//modules/service_accounts_iam"
-  version = "7.4.0"
+  version = "7.4.1"
 
   project          = var.project_id
-  service_accounts = [module.workload_id_sql_service_account.email]
+  service_accounts = [module.workload_id_looker_k8s_service_account.email]
   mode             = "authoritative"
   bindings = {
     "roles/iam.workloadIdentityUser" = [
-      for env in keys(var.envs) : "serviceAccount:${module.looker_gke[env].identity_namespace}[${var.looker_k8s_namespace}-${env}/${var.looker_k8s_service_account}-${env}]"
+      for k, v in var.envs : "serviceAccount:${module.looker_gke.identity_namespace}[${v.looker_k8s_namespace}/looker-service-account-${k}]"
     ]
   }
 }
-
-# This next set takes care of appropriate DNS permissions to allow cert-manager to create SSL certificates
-module "workload_id_dns_service_account" {
-  source  = "terraform-google-modules/service-accounts/google"
-  version = "4.1.0"
-
-  project_id   = local.parsed_dns_project_id
-  prefix       = var.prefix
-  display_name = "GKE Workload ID DNS"
-  names        = ["looker-dns-workload-id"]
-  description  = "Service account for GKE DNS workload identity"
-  project_roles = [
-    "${local.parsed_dns_project_id}=>roles/dns.admin",
-  ]
-}
-
-module "workload_id_dns_member" {
-  depends_on = [module.looker_gke]
-
-  source  = "terraform-google-modules/iam/google//modules/service_accounts_iam"
-  version = "7.4.0"
-
-  project          = local.parsed_dns_project_id
-  service_accounts = [module.workload_id_dns_service_account.email]
-  mode             = "authoritative"
-  bindings = {
-    "roles/iam.workloadIdentityUser" = [
-      for env in keys(var.envs) : "serviceAccount:${module.looker_gke[env].identity_namespace}[${var.certmanager_k8s_namespace}/${var.certmanager_k8s_service_account}]"
-    ]
-  }
-}
-
 
 #######
 # DNS #
@@ -440,24 +390,123 @@ module "workload_id_dns_member" {
 # we're assuming a domain and GCP Managed DNS Zone already exist.
 
 data "google_dns_managed_zone" "dns_zone" {
-  name = var.dns_managed_zone_name
+  name    = var.dns_managed_zone_name
   project = local.parsed_dns_project_id
 }
 
-module "looker_dns" {
-  source  = "terraform-google-modules/address/google"
-  version = "3.1.1"
+resource "google_compute_address" "looker_ip" {
+  name        = "${var.prefix}-looker-ip"
+  region      = var.region
+  description = "IP address for Looker instance(s) load balancer"
+}
 
-  for_each = var.envs
+resource "google_dns_record_set" "looker_dns_record" {
+  for_each     = var.envs
+  project      = local.parsed_dns_project_id
+  managed_zone = data.google_dns_managed_zone.dns_zone.name
+  type         = "A"
+  name         = "${each.key}.${var.looker_subdomain}.${data.google_dns_managed_zone.dns_zone.dns_name}"
+  rrdatas      = [google_compute_address.looker_ip.address]
+  ttl          = 300
+}
 
-  project_id   = var.project_id
-  region       = var.region
-  address_type = "EXTERNAL"
-  names        = ["looker-ip-${each.key}"]
+########
+# Helm #
+########
 
-  enable_cloud_dns = true
-  dns_managed_zone = data.google_dns_managed_zone.dns_zone.name
-  dns_project      = local.parsed_dns_project_id
-  dns_domain       = local.parsed_hosted_zone_domain
-  dns_short_names  = [var.looker_subdomain == "" ? each.key : "${each.key}.${var.looker_subdomain}"]
+# We now deploy kubernetes workloads via Helm.
+
+resource "helm_release" "cert_manager" {
+  depends_on       = [module.looker_gke]
+  name             = "cert-manager"
+  repository       = "https://charts.jetstack.io"
+  chart            = "cert-manager"
+  version          = var.certmanager_helm_version
+  namespace        = "cert-manager"
+  create_namespace = true
+  values = [
+    file("${path.module}/helm_values/cert_manager_values.yaml")
+  ]
+}
+
+resource "helm_release" "ingress_nginx" {
+  depends_on       = [module.looker_gke]
+  name             = "ingress-nginx"
+  repository       = "https://kubernetes.github.io/ingress-nginx"
+  chart            = "ingress-nginx"
+  version          = var.ingress_nginx_helm_version
+  namespace        = "ingress-nginx"
+  create_namespace = true
+  values = [
+    templatefile(
+      "${path.module}/helm_values/ingress_nginx_values.yaml",
+      {
+        ip_address = google_compute_address.looker_ip.address
+      }
+    )
+  ]
+}
+
+resource "helm_release" "secrets_store_csi_driver" {
+  depends_on = [module.looker_gke]
+  name       = "csi-secrets-store"
+  repository = "https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts"
+  chart      = "secrets-store-csi-driver"
+  version    = var.secrets_store_csi_driver_helm_version
+  namespace  = "kube-system"
+  values = [
+    file("${path.module}/helm_values/secrets_store_csi_values.yaml")
+  ]
+}
+
+resource "helm_release" "looker" {
+  depends_on = [helm_release.cert_manager, helm_release.ingress_nginx, helm_release.secrets_store_csi_driver, module.workload_id_looker_k8s_member]
+  for_each   = var.envs
+
+  name             = each.key
+  chart            = var.looker_helm_repository
+  version          = var.looker_helm_version
+  namespace        = each.value.looker_k8s_namespace
+  create_namespace = true
+  disable_webhooks = var.disable_hooks
+  timeout          = 600
+  values = [
+    templatefile(
+      "${path.module}/helm_values/looker_values.yaml",
+      {
+        looker_k8s_repository                = var.looker_k8s_repository
+        looker_k8s_image_pull_policy         = var.looker_k8s_image_pull_policy
+        looker_version                       = each.value.looker_version
+        looker_gcp_service_account_email     = module.workload_id_looker_k8s_service_account.email
+        filestore_ip                         = google_filestore_instance.looker_filestore[each.key].networks.0.ip_addresses.0
+        looker_db_name                       = "looker-${each.key}"
+        looker_db_user                       = "looker-${each.key}"
+        looker_db_connection_name            = module.looker_db.instance_connection_name
+        looker_host_url                      = "${each.key}.${var.looker_subdomain}.${local.parsed_hosted_zone_domain}"
+        secrets_project                      = var.project_id
+        db_pass_secret_name                  = each.value.db_secret_name
+        gcm_key_secret_name                  = each.value.gcm_key_secret_name
+        cert_admin_email                     = each.value.looker_k8s_issuer_admin_email
+        cert_server                          = each.value.looker_k8s_issuer_acme_server
+        looker_node_count                    = each.value.looker_node_count
+        looker_version                       = each.value.looker_version
+        looker_startup_flags                 = each.value.looker_startup_flags
+        looker_update_config                 = indent(2, yamlencode(each.value.looker_k8s_update_config))
+        looker_node_resources                = indent(4, yamlencode(each.value.looker_k8s_node_resources))
+        looker_scheduler_node_enabled        = each.value.looker_scheduler_node_enabled
+        looker_scheduler_node_count          = each.value.looker_scheduler_node_count
+        looker_scheduler_node_resources      = indent(6, yamlencode(each.value.looker_scheduler_resources))
+        looker_scheduler_threads             = each.value.looker_scheduler_threads
+        looker_scheduler_unlimited_threads   = each.value.looker_scheduler_unlimited_threads
+        looker_scheduler_alert_threads       = each.value.looker_scheduler_alert_threads
+        looker_scheduler_render_caching      = each.value.looker_scheduler_render_caching_jobs
+        looker_scheduler_render_jobs         = each.value.looker_scheduler_render_jobs
+        looker_redis_enabled                 = each.value.redis_enabled
+        looker_redis_ip                      = each.value.redis_enabled ? module.looker_cache[each.key].host : ""
+        looker_redis_port                    = each.value.redis_enabled ? module.looker_cache[each.key].port : 0
+        looker_user_provisioning_enabled     = each.value.user_provisioning_enabled
+        looker_user_provisioning_secret_name = each.value.user_provisioning_secret_name
+      }
+    )
+  ]
 }
