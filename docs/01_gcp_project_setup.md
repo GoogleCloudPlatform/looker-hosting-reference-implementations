@@ -115,6 +115,11 @@ IAP Secure Tunnel User
 
 Once your service account is created you will need to grant your account the ability to [impersonate it](https://cloud.google.com/iam/docs/impersonating-service-accounts#impersonate-sa-level). Navigate to Service Account's Permissions, add your principal email address, and grant it the `Service Account Token Creator` role.
 
+We need to make one more IAM-related change. Navigate to IAM & Admin -> IAM and locate your Cloud Build service account - it will have been automatically created when you enabled the Cloud Build API. It will have the format of `<project number>@cloudbuild.gserviceaccount.com`.
+
+Edit the permissions and add `Secret Manager Secret Accessor`.
+
+
 ## Step 8: Install Required Software
 
 Let's get the rest of the software stack installed in your development environment. See below for links to installation instructions for each tool.
