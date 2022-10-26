@@ -1,0 +1,32 @@
+# Copyright 2022 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+steps:
+  - id: "deploy helm chart"
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+          curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+          chmod 700 get_helm.sh
+          ./get_helm.sh
+          sleep 1
+          helm package .
+          HELM_PACKAGE=$(find . -type f -iname looker-helm*.tgz)
+          gcloud auth application-default print-access-token | helm registry login -u oauth2accesstoken --password-stdin https://${_REGISTRY_LOCATION}-docker.pkg.dev
+          helm push $$HELM_PACKAGE oci://${_REGISTRY_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REGISTRY_REPO_NAME}
+substitutions:
+  _REGISTRY_LOCATION: "us-central1"
+  _REGISTRY_REPO_NAME: "looker"
