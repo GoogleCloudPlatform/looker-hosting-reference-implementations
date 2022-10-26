@@ -86,7 +86,7 @@ Variable definitions are as follows:
 | certmanager_helm_version | The Helm chart version to use for certmanager | "v1.9.1" |
 | ingress_nginx_helm_version | The Helm chart version to use for ingress_nginx | "4.2.5" |
 | secrets_store_csi_driver_helm_version | The Helm chart version to use for secrets_store_csi_driver | "1.2.4" |
-| looker_helm_repository | The Artifact Registry repository where the Looker Helm chart is stored | |
+| looker_helm_repository | The Artifact Registry repository where the Looker Helm chart is stored. For GCP Artifact Registry, this must begin with "oci://" | |
 | looker_helm_version | The Helm chart version to use for Looker | "0.1.0" |
 | disable_hooks | Should the Helm hooks be disable for the Looker Helm rollout. Essentially used to skip the schema migration job - useful if your rollout does not include a version upgrade and you want it to deploy faster. | false |
 | envs | Instance-specific details for each deployed Looker instance. The details of the object map are explained below. | |

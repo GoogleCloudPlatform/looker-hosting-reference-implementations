@@ -311,7 +311,7 @@ variable "secrets_store_csi_driver_helm_version" {
 
 variable "looker_helm_repository" {
   type        = string
-  description = "The repository where the Looker helm chart is stored"
+  description = "The repository where the Looker helm chart is stored. For GCP Artifact Registry, this must begin with: oci:// "
 }
 
 variable "looker_helm_version" {
