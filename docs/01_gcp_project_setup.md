@@ -4,7 +4,9 @@ In order to deploy Looker you will first need a GCP project. This guide will wal
 
 > Note: This is not a recommended setup for your production environment. Your production projects will likely need to be configured a bit differently - especially if you are separating various duties into distinct GCP projects and leveraging best practices such as Shared VPC and VPC-SC.
 
-> Note: Project creation can (and should!) be fully automated with Terraform as well. For more information please refer to the [Cloud Foundation's Project Factory module](https://registry.terraform.io/modules/terraform-google-modules/project-factory/google/latest) for approaches to bootstrapping a GCP project. For the moment, we'll use the GCP Console to create our new project just to keep things simple.
+> Note: Project creation can (and should!) be fully automated with Terraform as well, please refer to documentation 01a to learn more about that.
+
+For more information please refer to the [Cloud Foundation's Project Factory module](https://registry.terraform.io/modules/terraform-google-modules/project-factory/google/latest) for approaches to bootstrapping a GCP project. For the moment, we'll use the GCP Console to create our new project just to keep things simple.
 
 ## Prerequisites
 
