@@ -16,11 +16,19 @@ These reference implementations are not an official Google product. We will resp
 For the significant majority of customers, Looker's hosted option is the correct choice for how to deploy Looker. If you are working through your
 hosting decision please reach out to your GCP account team for help. Self-hosting Looker should not be entered into lightly.
 
+## How To Use This Repo
+
+This repo is intended to be used as a reference for your own implementation and as such we designed many elements to be as generic as possible. You will almost certainly need to modify elements to fit your organization's specific requirements. We strongly recommend you fork this repo so you can have full control over your unique setup. While you will find end-to-end tools to help spin up a fully functional sandbox environment we've found that most users opt to pick and choose samples of the code to solve specific problems.
+
+## Hey! Where's the Kubernetes Directory??
+
+In the 1.0 version of this tooling the Kubernetes components were stored in a separate `kubernetes` directory. For the 2.0 release we've streamlined the process significantly by leveraging Helm. Please refer to the [2.0 release notes](https://github.com/GoogleCloudPlatform/looker-hosting-reference-implementations/releases/tag/v2.0.0) for more details.
+
 ## Requirements
 
-- Packer >= 1.7.0
-- Terraform >= 1.0.0
-- Kubernetes >= 1.21
+- Terraform >= 1.3.0
+- Kubernetes/Kubectl >= 1.21
+- Helm >= 3.0
 
 You will also require Project Creator permissions for your GCP Organization.
 
