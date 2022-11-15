@@ -117,6 +117,6 @@ module "dns" {
 
   project_id = module.project.project_id
   type       = "public"
-  name       = var.dns_zone
+  name       = replace(trim(var.dns_domain, "."), ".", "-")
   domain     = var.dns_domain
 }

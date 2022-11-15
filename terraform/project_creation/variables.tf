@@ -51,11 +51,6 @@ variable "email_address" {
   type        = string
 }
 
-variable "dns_zone" {
-  description = "DNS Zone Name"
-  type        = string
-}
-
 variable "dns_domain" {
   description = "DNS Domain Name  - this NEEDS to end with a period"
   type        = string
