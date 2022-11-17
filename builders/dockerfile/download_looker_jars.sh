@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -e
 
 # Set these variables. For LOOKER_VERSION include a major and minor version only, no patch version - e.g. "21.0" or "21.4"
 PARSED_VERSION=looker-${LOOKER_VERSION}-latest.jar
@@ -30,3 +31,12 @@ curl $url -o looker.jar
 
 url=$(cat response.txt | jq -r '.depUrl')
 curl $url -o looker-dependencies.jar
+
+echo "Checking SHA values..."
+sha=$(cat response.txt | jq -r '.sha256' | tr -d '\n')
+depsha=$(cat response.txt | jq -r '.depSha256' | tr -d '\n')
+
+echo "$sha looker.jar" | sha256sum --check
+echo "$depsha looker-dependencies.jar" | sha256sum --check
+
+cat response.txt| jq -r '.version_text' | sed 's/\.jar//' | sed 's/looker-//' > minor_version.txt

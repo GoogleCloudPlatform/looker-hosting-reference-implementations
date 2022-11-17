@@ -13,7 +13,8 @@
 # limitations under the License.
 
 steps:
-  - name: 'launcher.gcr.io/google/ubuntu1604'
+  - id: 'download looker jar'
+    name: 'launcher.gcr.io/google/ubuntu1604'
     entrypoint: 'bash'
     args: ['-c','apt update && apt install -y jq && ./download_looker_jars.sh']
     env:
@@ -22,23 +23,40 @@ steps:
     secretEnv:
       - LOOKER_LICENSE_KEY
     dir: '${_WORKSTREAM_PATH}'
-  - name: 'launcher.gcr.io/google/ubuntu1604'
+  - id: 'download prometheus jmx agent'
+    name: 'launcher.gcr.io/google/ubuntu1604'
     entrypoint: 'curl'
     args: ['https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/0.15.0/jmx_prometheus_javaagent-0.15.0.jar', '-O']
     dir: '${_WORKSTREAM_PATH}'
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', '${_REGISTRY}:${_LOOKER_VERSION}', '-t', '${_REGISTRY}', '.']
+  - id: 'build looker image'
+    name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+          minor_version=$(cat minor_version.txt)
+          docker build -t ${_REGISTRY_PATH}/${_IMAGE_NAME} -t ${_REGISTRY_PATH}/${_IMAGE_NAME}:${_LOOKER_VERSION} -t ${_REGISTRY_PATH}/${_IMAGE_NAME}:$$minor_version . 
+    dir: '${_WORKSTREAM_PATH}'
+  - id: 'push looker image'
+    name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+          minor_version=$(cat minor_version.txt)
+          docker push ${_REGISTRY_PATH}/${_IMAGE_NAME}:$$minor_version 
     dir: '${_WORKSTREAM_PATH}'
 substitutions:
-  _LOOKER_LICENSE_KEY_SECRET: 'looker-license-key'
-  _LOOKER_TECHNICAL_CONTACT_EMAIL: 'me@company.com'
-  _LOOKER_VERSION: '21.18'
+  _LOOKER_LICENSE_KEY_SECRET: 'looker_license_key'
+  _LOOKER_TECHNICAL_CONTACT_EMAIL: ''
+  _LOOKER_VERSION: ''
   _WORKSTREAM_PATH: './'
-  _REGISTRY: ''
+  _REGISTRY_PATH: ''
+  _IMAGE_NAME: 'looker'
 availableSecrets:
   secretManager:
     - versionName: projects/${PROJECT_ID}/secrets/${_LOOKER_LICENSE_KEY_SECRET}/versions/latest
       env: LOOKER_LICENSE_KEY
 images:
-  - '${_REGISTRY}:${_LOOKER_VERSION}'
-  - '${_REGISTRY}'
+  - '${_REGISTRY_PATH}/${_IMAGE_NAME}:${_LOOKER_VERSION}'
+  - '${_REGISTRY_PATH}/${_IMAGE_NAME}'
