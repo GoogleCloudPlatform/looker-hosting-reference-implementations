@@ -14,23 +14,25 @@
 
 steps:
   - id: 'download looker jar'
-    name: 'launcher.gcr.io/google/ubuntu1604'
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
     entrypoint: 'bash'
-    args: ['-c','apt update && apt install -y jq && ./download_looker_jars.sh']
+    args: ['-c','apt update && apt install -y jq && ./download_looker_jars.sh && ./determine_latest_tag.sh']
     env:
       - 'LOOKER_TECHNICAL_CONTACT_EMAIL=${_LOOKER_TECHNICAL_CONTACT_EMAIL}'
       - 'LOOKER_VERSION=${_LOOKER_VERSION}'
+      - 'REGISTRY_PATH=${_REGISTRY_PATH}'
+      - 'IMAGE_NAME=${_IMAGE_NAME}'
     secretEnv:
       - LOOKER_LICENSE_KEY
     dir: '${_WORKSTREAM_PATH}'
   - id: 'download prometheus jmx agent'
-    name: 'launcher.gcr.io/google/ubuntu1604'
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
     entrypoint: 'curl'
     args: ['https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/0.15.0/jmx_prometheus_javaagent-0.15.0.jar', '-O']
     dir: '${_WORKSTREAM_PATH}'
   - id: 'build looker image'
     name: 'gcr.io/cloud-builders/docker'
-    entrypoint: 'sh'
+    entrypoint: 'bash'
     args:
       - '-c'
       - |
@@ -39,12 +41,16 @@ steps:
     dir: '${_WORKSTREAM_PATH}'
   - id: 'push looker image'
     name: 'gcr.io/cloud-builders/docker'
-    entrypoint: 'sh'
+    entrypoint: 'bash'
     args:
       - '-c'
       - |
           minor_version=$(cat minor_version.txt)
           docker push ${_REGISTRY_PATH}/${_IMAGE_NAME}:$$minor_version 
+          if [[ $(cat latest_tag.txt) -eq 1 ]]
+          then
+            docker push ${_REGISTRY_PATH}/${_IMAGE_NAME}
+          fi
     dir: '${_WORKSTREAM_PATH}'
 substitutions:
   _LOOKER_LICENSE_KEY_SECRET: 'looker_license_key'
@@ -59,4 +65,3 @@ availableSecrets:
       env: LOOKER_LICENSE_KEY
 images:
   - '${_REGISTRY_PATH}/${_IMAGE_NAME}:${_LOOKER_VERSION}'
-  - '${_REGISTRY_PATH}/${_IMAGE_NAME}'
