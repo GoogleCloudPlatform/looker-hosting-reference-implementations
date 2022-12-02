@@ -41,7 +41,7 @@ java \
   -XX:InitialRAMPercentage=75.0 \
   -XshowSettings:vm \
   -XX:+AlwaysPreTouch \
-  -XX:MaxMetaspaceSize=500m \
+  -XX:MaxMetaspaceSize=1100m \
   -XX:+UseG1GC \
   -XX:MaxGCPauseMillis=500 \
   -XX:+UseStringDeduplication \
