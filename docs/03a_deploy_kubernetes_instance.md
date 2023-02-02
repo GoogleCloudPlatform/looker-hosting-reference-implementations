@@ -27,8 +27,8 @@ db_tier               = "db-custom-2-7680"
 
 gke_node_zones        = ["us-central1-a"]
 gke_node_tier         = "e2-standard-16"
-gke_node_min          = 3
-gke_node_max          = 5
+gke_node_count_min    = 3
+gke_node_count_max    = 5
 
 looker_k8s_repository = "us-central1-docker.pkg.dev/my-gcp-project/looker/looker"
 looker_helm_repository = "oci://us-central1-docker.pkg.dev/my-gcp-project/looker/looker-helm"
@@ -36,7 +36,7 @@ looker_helm_repository = "oci://us-central1-docker.pkg.dev/my-gcp-project/looker
 envs = {
   dev = {
     db_secret_name                = "looker-dev-db-password"
-    gcm_secret_name               = "looker-dev-gcm-encryption-key"
+    gcm_key_secret_name           = "looker-dev-gcm-encryption-key"
     looker_node_count             = 1
     looker_version                = "22.16"
     looker_k8s_issuer_admin_email = "me@example.com"
