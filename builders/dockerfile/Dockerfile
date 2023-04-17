@@ -18,8 +18,12 @@ ARG WHICH_CHROMIUM="97.0.4692.71-1"
 
 RUN addgroup --gid 9999 looker && adduser --system --disabled-password --disabled-login --uid 9999 --gid 9999 --shell /bin/bash --home /app looker
 
+RUN apt-get update && apt-get install -y software-properties-common
+RUN add-apt-repository ppa:git-core/ppa
+
 RUN apt-get update && apt-get install -y \
   curl \
+  git \
   fontconfig \
   fonts-freefont-otf \
   tzdata \
