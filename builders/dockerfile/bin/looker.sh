@@ -45,6 +45,7 @@ java \
   -XX:+UseG1GC \
   -XX:MaxGCPauseMillis=500 \
   -XX:+UseStringDeduplication \
+  -Dnashorn.args=--optimistic-types=false \
   $JMXARGS \
   -javaagent:./jmx_prometheus_javaagent-0.15.0.jar=9920:jmx-prom-config.yaml \
   -jar /app/looker.jar \
