@@ -14,7 +14,7 @@
 
 FROM ubuntu:focal
 
-ARG WHICH_CHROMIUM="97.0.4692.71-1"
+ARG WHICH_CHROMIUM="97.0.4692.99-1"
 
 RUN addgroup --gid 9999 looker && adduser --system --disabled-password --disabled-login --uid 9999 --gid 9999 --shell /bin/bash --home /app looker
 
